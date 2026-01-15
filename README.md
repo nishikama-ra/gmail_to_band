@@ -1,89 +1,40 @@
-Gmail to BAND Announce Bot
-Google Apps Script (GAS) を使用して、Gmailで受信した特定の防犯・防災メールを BAND 掲示板へ自動投稿する連携システムです。
+# Gmail to BAND Announce Bot
 
-西鎌倉自治会などの地域コミュニティにおいて、行政や警察からの防犯情報をリアルタイムかつ自動的に住民へ共有することを目的としています。 
+[cite_start]Google Apps Script (GAS) を使用して、**Gmailで受信した特定の防犯・防災メールを BAND 掲示板へ自動投稿**する連携システムです [cite: 3, 29]。
 
-🌟 主な機能
+[cite_start]西鎌倉自治会（Nishikamakura Jichikai）において、行政や警察からの情報をタイムリーに住民へ共有するために開発されました 。
 
-自動転送: 指定した送信元からのメールを検出し、BANDの掲示板に投稿します。 
-+3
+## 🌟 主な機能
 
+* [cite_start]**自動転送:** 指定した送信元からの未読メールを検出し、BAND掲示板に投稿します [cite: 30, 41]。
+* [cite_start]**ルールベースの加工:** 送信元ごとにカスタムヘッダーの追加や、不要なフッター文字列（配信停止案内など）の自動カットが可能です [cite: 26, 27, 47, 49]。
+* [cite_start]**ハッシュタグ対応:** 投稿時に `#防犯` などのタグを自動で付与できます [cite: 25, 48]。
+* [cite_start]**添付ファイル対応:** メールの添付ファイルを Google ドライブに自動保存し、共有用URLを生成して投稿に記載します [cite: 6, 13, 40]。
+* [cite_start]**API ポータル:** 外部審査や管理用の Web インターフェースを備えています [cite: 2, 3]。
 
-ルールベースの加工: 送信元ごとに「カスタムヘッダー」の追加や、不要なフッター（解除案内など）のカットが可能です。 
-+2
+## ⚙️ セットアップ手順
 
+### 1. BAND API の準備
+1. [cite_start][BAND Developers](https://developers.band.us/) で `Access Token` を取得します [cite: 28]。
+2. [cite_start]`BandHelper.gs` 内の `getBandList()` 関数を実行し、ログから投稿先 BAND の `band_key` を確認します [cite: 19, 23]。
 
-ハッシュタグ対応: 投稿時に #防犯 などのタグを自動付与できます。 
-+2
+### 2. GAS の設定
+1. [cite_start]`Config_sample.gs` をコピーして `Config.gs` を作成します [cite: 25]。
+2. [cite_start]以下の項目を自身の環境に合わせて書き換えます [cite: 28]：
+   - `BAND_ACCESS_TOKEN`: 取得したトークン
+   - `TARGET_BAND_KEY`: 投稿先のキー
+   - `IMAGE_FOLDER_ID`: 添付ファイルを保存するフォルダID
+   - `SENDERS`: 送信元アドレスと適応するルールの紐付け
 
+### 3. トリガー設定
+1. [cite_start]GAS エディタの「トリガー」から、`checkGmailAndPostToBand` 関数を時間主導型（5分〜15分おき等）で実行するように設定します [cite: 29]。
 
-添付ファイル対応: メールの添付ファイルを Google ドライブに自動保存し、閲覧用URLを投稿に添えます。 
-+4
+## 🛠 カスタマイズ (Config.gs)
 
+[cite_start]メールの加工ルールは `RULE_` オブジェクトで定義します [cite: 26, 27]。
 
-API ポータル機能: Google の認証や審査に対応するための、シンプルなポータル画面を表示可能です。 
-+1
-
-📋 構成ファイル
-
-Main.gs: メインロジック（メール走査・投稿制御）。 
-
-
-BandHelper.gs: BAND API との通信、および Google ドライブへのファイル保存。 
-+3
-
-
-Config.gs: 認証情報、送信元ルール、タグの定義（Config_sample.gs を元に作成）。 
-+1
-
-
-Announce.gs: API 連携用のポータル画面（Webアプリ）の定義。 
-
-⚙️ セットアップ手順
-1. BAND API の準備
-
-BAND Developers にて Access Token を取得します。 
-+1
-
-
-BandHelper.gs 内の getBandList() 関数を実行し、投稿先となる BAND の band_key を確認してください。 
-+1
-
-2. Google Apps Script の設定
-GAS プロジェクトを作成し、本リポジトリのファイルをアップロードします。
-
-
-Config_sample.gs を Config.gs にリネームし、以下を設定します： 
-+1
-
-BAND_ACCESS_TOKEN
-
-TARGET_BAND_KEY
-
-IMAGE_FOLDER_ID: 添付ファイルを保存する Google ドライブのフォルダID
-
-SENDERS: 監視対象のメールアドレスと適用するルールの紐付け
-
-3. トリガーの設定
-GAS エディタの「トリガー（時計アイコン）」を開きます。
-
-
-checkGmailAndPostToBand 関数を、分単位（例：5分〜15分おき）で実行するように設定します。 
-
-🛠 カスタマイズ
-Config.gs の RULE_ 定数を書き換えることで、メール本文の切り取り位置やヘッダーを自由に調整できます。
-
-JavaScript
-
-const RULE_CUSTOM = {
-  customHeader: '【〇〇からの重要なお知らせ】',
-  cutOffString: '--- 配信停止はこちら ---' // この文字列以降をカット
+```javascript
+const RULE_EXAMPLE = {
+  customHeader: '【自動投稿】',
+  cutOffString: '--- 配信停止はこちら ---' // この文字以降を削除
 };
-📄 ライセンス
-Copyright (c) Nishi-kamakura Residents' Association All Rights Reserved. 
-
-
-西鎌倉自治会 IT推進チーム  itpromotion@nishikamakura-jichikai.com
-
-次のステップとして
-この README.md をリポジトリに配置するほか、Config.gs のサンプルコードに含まれているメールアドレスやトークンのダミー値を、実際の運用に合わせて差し替えるお手伝いも可能です。必要であればお申し付けください。
