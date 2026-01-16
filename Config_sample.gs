@@ -12,7 +12,7 @@ const CONFIG = {
 
   // --- タグ定義 ---
   TAGS: {
-    BOUHAN: '#防災・防犯',
+    BOUHAN: '#防犯',
     NONE: null
   },
 
@@ -58,3 +58,4 @@ const CONFIG = {
 `.trim()
   }
 };
+
