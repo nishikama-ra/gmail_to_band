@@ -75,33 +75,3 @@ function postToBand(content, fileUrls = []) {
     return false;
   }
 }
-
-
-/**
- * 【初期設定用】
- * この関数を一度実行して、ログ画面から投稿したいBANDの「band_key」を確認してください。
- */
-function getBandList() {
-  const endpoint = 'https://openapi.band.us/v2.1/bands';
-  const url = `${endpoint}?access_token=${CONFIG.BAND_ACCESS_TOKEN}`;
-  
-  try {
-    const response = UrlFetchApp.fetch(url);
-    const json = JSON.parse(response.getContentText());
-    
-    if (json.result_code === 1) {
-      console.log("=== あなたのBAND一覧 ===");
-      json.result_data.bands.forEach(band => {
-        console.log(`BAND名: ${band.name}`);
-        console.log(`band_key: ${band.band_key}`);
-        console.log("------------------------");
-      });
-      console.log("Config.gsの TARGET_BAND_KEY に、該当する band_key をコピーしてください。");
-    } else {
-      console.log("BAND情報の取得に失敗しました。アクセストークンを確認してください。");
-      console.log(json);
-    }
-  } catch (e) {
-    console.log("エラーが発生しました: " + e.toString());
-  }
-}
