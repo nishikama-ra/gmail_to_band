@@ -1,35 +1,61 @@
 /**
- * 指定座標の3時間おき予報をBANDに投稿する
+ * 指定座標の3時間おき予報をBANDに投稿する（リトライ＋エラーメール通知版）
  */
 function postWeatherToBand() {
+  const config = CONFIG.WEATHER_CONFIG;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.LATITUDE}&longitude=${config.LONGITUDE}&hourly=temperature_2m,weathercode&timezone=Asia%2FTokyo`;
+  
+  let response;
+  let success = false;
+  const maxRetries = 5; 
+  let lastError = "";
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      response = UrlFetchApp.fetch(url, { 'muteHttpExceptions': true });
+      const responseCode = response.getResponseCode();
+
+      if (responseCode === 200) {
+        success = true;
+        break; 
+      } else if (responseCode === 429) {
+        lastError = `API制限(429) - Google共有IPの混雑`;
+        const waitTime = (15000 + Math.random() * 30000);
+        console.warn(`${lastError}。${Math.round(waitTime/1000)}秒後にリトライします (${i + 1}/${maxRetries})`);
+        Utilities.sleep(waitTime);
+      } else {
+        lastError = `APIエラー (Status: ${responseCode})`;
+        throw new Error(lastError);
+      }
+    } catch (e) {
+      lastError = e.message;
+      console.error(`通信エラー: ${lastError}`);
+      if (i === maxRetries - 1) break; 
+      Utilities.sleep(5000);
+    }
+  }
+
+  // 最終的に失敗した場合、メールで通知する
+  if (!success) {
+    sendWeatherErrorMail(lastError);
+    return;
+  }
+
   try {
-    const config = CONFIG.WEATHER_CONFIG;
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.LATITUDE}&longitude=${config.LONGITUDE}&hourly=temperature_2m,weathercode&timezone=Asia%2FTokyo`;
-    
-    const response = UrlFetchApp.fetch(url);
     const data = JSON.parse(response.getContentText());
     const hourly = data.hourly;
     const now = new Date();
     
     let content = `${config.TAG}\n${config.TITLE}\n\n`;
-
     let count = 0;
+
     for (let i = 0; i < hourly.time.length; i++) {
       const forecastTime = new Date(hourly.time[i]);
-      
-      // 現在時刻より後、かつ3時間おき(0,3,6...)の予報を抽出
       if (forecastTime > now && count < config.WEATHER_FORECAST_COUNT) {
         if (forecastTime.getHours() % 3 === 0) {
           const timeStr = Utilities.formatDate(forecastTime, "JST", "MM/dd HH:00");
-          
-          // 気温（小数点1桁）
           const tempVal = hourly.temperature_2m[i].toFixed(1);
-          // 天気名称
           const weatherDesc = config.WEATHER_MAP[hourly.weathercode[i]] || "❓ 不明";
-          
-          // --- レイアウトの工夫 ---
-          // 無理に全角スペースで右端を揃えず、天気と気温をセットにする
-          // 時刻と天気の間のスペースだけ固定することで、左側のラインはピシッと揃います
           content += `${timeStr}   ${weatherDesc} (${tempVal}℃)\n`;
           count++;
         }
@@ -37,13 +63,46 @@ function postWeatherToBand() {
     }
 
     content += `\n---\n${config.FOOTER}`;
-
     postToBand(content);
-    console.log("天気予報を投稿しました。");
+    console.log("天気予報の投稿に成功しました。");
 
   } catch (e) {
-    console.error("天気予報取得エラー: " + e.message);
+    sendWeatherErrorMail("データ解析エラー: " + e.message);
   }
+}
+
+/**
+ * 天気予報専用のエラー通知メール
+ */
+function sendWeatherErrorMail(errorMessage) {
+  const recipient = CONFIG.ERROR_MAIL.TO;
+  const subject = "【GAS重要】天気予報の自動投稿に失敗しました";
+  const body = `
+
+天気予報の自動投稿処理でエラーが発生しました。
+5回のリトライを試みましたが、情報を取得できませんでした。
+
+■発生したエラー内容:
+${errorMessage}
+
+■推測される原因:
+・Google共有サーバーのIPアドレス制限（429エラー）
+・Open-Meteo APIの一時的なダウン
+
+この投稿はスキップされました。次回の定期実行（12時間後）に再度試行されます。
+急ぎで投稿が必要な場合は、GASエディタから手動で postWeatherToBand を実行してください。
+`.trim();
+
+  try {
+    MailApp.sendEmail(recipient, subject, body);
+    console.log("管理者へエラー通知メールを送信しました。");
+  } catch (e) {
+    console.error("エラーメールの送信自体に失敗しました: " + e.message);
+  }
+}
+
+function triggerWeather() {
+  postWeatherToBand();
 }
 
 /**
