@@ -26,22 +26,37 @@ const CONFIG = {
       customHeader: '【ピーガルくん安全メールからの自動投稿です】',
       cutOffString: '※※※※※※※※※※'
     },
+    JORUDAN: {
+      customHeader: '【ジョルダン運行情報からの自動投稿です】',
+      cutOffString: 'メール設定変更・配信解除'
+    },
     GENERAL: {
       customHeader: '【自動投稿メールです】',
       cutOffString: null
     }
   },
 
+
+  // --- メールフィルタ設定 ---
+  // 送信元アドレスをキーにして、個別のフィルタ条件を定義します
+  MAIL_FILTERS: {
+    'unkou@jorudan.co.jp': {
+      priorityRoutes: ['湘南モノレール', '江ノ島電鉄'],
+      criticalKeywords: ['運休', '見合わせ', '折返し運転', '運転再開見込は立っていません']
+    }
+    // 他のアドレスでフィルタが必要になったらここに追加するだけ
+  },
+  
   // --- 送信元アドレスと適応ルールの紐付け ---
   SENDERS: {
     'kamakura@sg-p.jp': ['KAMAKURA', 'BOUHAN'],
-    'kaztsh@gmail.com': ['KAMAKURA', 'BOUHAN'],
-    'oshirase@kodomoanzen.police.pref.kanagawa.jp': ['POLICE', 'BOUHAN']
+    'oshirase@kodomoanzen.police.pref.kanagawa.jp': ['POLICE', 'BOUHAN'],
+    'unkou@jorudan.co.jp': ['JORUDAN', 'NONE']
   },
 
   // --- エラー通知メール設定 ---
   ERROR_MAIL: {
-    TO: 'xxxxx@xxx.xxx',
+    TO: 'itpromotion@nishikamakura-jichikai.com',
     SUBJECT: '【GASエラー通知】Gmail to BAND連携',
     TEMPLATE: `
 ■発生したエラー:
@@ -58,4 +73,3 @@ const CONFIG = {
 `.trim()
   }
 };
-
