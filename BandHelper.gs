@@ -75,3 +75,31 @@ function postToBand(content, fileUrls = []) {
     return false;
   }
 }
+
+/**
+ * 特定住所検知時に別のBANDへ投稿する専用関数
+ */
+function postToExtraBand(content, fileUrls = []) {
+  const endpoint = 'https://openapi.band.us/v2.2/band/post/create';
+  let finalContent = content;
+
+  if (fileUrls.length > 0) {
+    finalContent += "\n\n------------------\n添付資料\n" + fileUrls.join('\n');
+  }
+
+  const payload = {
+    'access_token': CONFIG.BAND_ACCESS_TOKEN,
+    'band_key': CONFIG.EXTRA_POST_CONFIG.TARGET_BAND_KEY, // ここが別BANDのキー
+    'content': finalContent,
+    'do_push': true
+  };
+
+  try {
+    UrlFetchApp.fetch(endpoint, {
+      'method': 'post',
+      'payload': payload
+    });
+  } catch (e) {
+    console.error(`別BANDへの投稿エラー: ${e.message}`);
+  }
+}
