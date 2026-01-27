@@ -1,5 +1,6 @@
 /**
  * 未読メールをスキャンし、添付ファイルの保存とBANDへの投稿を行います。
+ * 特定の住所が含まれる場合は別BANDへも転送します。
  */
 function checkGmailAndPostToBand() {
   const lock = LockService.getScriptLock();
@@ -90,11 +91,27 @@ function checkGmailAndPostToBand() {
           })
           .filter(url => url !== null);
 
-        // BAND投稿
+        // --- 1. 通常のBAND投稿 ---
         if (postToBand(postBody, fileUrls)) {
           message.markRead();
           processedCount++;
           console.log(`完了(${processedCount}/${totalToProcess}): [${data.date}] ${message.getSubject()}`);
+          
+          // --- 2. 追加：ピーガルくんかつ特定住所が含まれる場合の別BAND投稿 ---
+          // ピーガルくんのアドレス判定（Configのキーを使用）
+          if (senderEmail === 'oshirase@kodomoanzen.police.pref.kanagawa.jp') {
+            const watchAddresses = CONFIG.EXTRA_POST_CONFIG.WATCH_ADDRESSES;
+            const plainBody = message.getPlainBody(); // 判定用に加工前の本文を取得
+            
+            // 本文中に住所リストのいずれかが含まれているか判定
+            const hasTargetAddress = watchAddresses.some(address => plainBody.includes(address));
+            
+            if (hasTargetAddress) {
+              console.log("特定住所（近隣地区）を検知したため、別BANDへも投稿します。");
+              postToExtraBand(postBody, fileUrls);
+            }
+          }
+
         } else {
           throw new Error("BAND APIへの投稿に失敗しました。");
         }
@@ -105,7 +122,6 @@ function checkGmailAndPostToBand() {
       } catch (e) {
         console.error(`エラー: ${e.message} (${message.getSubject()})`);
         
-        // Configのテンプレートを使用して通知メールを送信
         if (CONFIG.ERROR_MAIL.TO) {
           const mailBody = CONFIG.ERROR_MAIL.TEMPLATE
             .replace('{errorMessage}', e.message)
