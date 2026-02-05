@@ -59,6 +59,6 @@ GASエディタの「設定（歯車アイコン）」→「スクリプトプ�
 * `Announce.gs`: 外部公開・審査用のポータル画面表示用。
 * `Config.gs`: 投稿ルール、ハッシュタグ、および住所フィルタの定義。
 
----
-**Contact:**
-[itpromotion@nishikamakura-jichikai.com](mailto:itpromotion@nishikamakura-jichikai.com)
+## 📄 ライセンス
+
+Copyright (c) Nishi-kamakura Residents' Association All Rights Reserved.
