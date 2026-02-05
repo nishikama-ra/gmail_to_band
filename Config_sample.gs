@@ -6,7 +6,7 @@ const CONFIG = {
   TARGET_BAND_KEY: 'XXXXXXXXXXXXXXXXXXXXXXXX', 
   // 添付ファイルがあった際の格納先GoogleDriveのフォルダ  
   IMAGE_FOLDER_ID: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-   // --- 実行制御 ---
+  // --- 実行制御 ---
   MAX_THREADS_PER_RUN: 15, 
 
   // --- タグ定義 ---
@@ -30,6 +30,12 @@ const CONFIG = {
       customHeader: '【ジョルダン運行情報からの自動投稿です】',
       cutOffString: 'メール設定変更・配信解除'
     },
+    YAHOO: {
+      customHeader: '【Yahoo!路線情報からの自動投稿です】',
+      startAfter: 'さん', 
+      cutOffString: 'このメールに返信されても', // ここから一旦カットするが…
+      keepFrom: 'Copyright'                   // この文字列がある行以降は「救出」して残す
+    },
     GENERAL: {
       customHeader: '【自動投稿メールです】',
       cutOffString: null
@@ -39,23 +45,35 @@ const CONFIG = {
   // --- メールフィルタ設定 ---
   // 送信元アドレスをキーにして、個別のフィルタ条件を定義します
   MAIL_FILTERS: {
-    'unkou@jorudan.co.jp': {
-      priorityRoutes: ['湘南モノレール', '江ノ島電鉄'],
-      criticalKeywords: ['運休', '見合わせ', '折返し運転', '運転再開見込は立っていません']
+     'alerts-transit@mail.yahoo.co.jp': {
+      priorityRoutes: ['湘南モノレール', '江ノ島電鉄'], // 監視したい路線を追加
+      criticalKeywords: ['運休', '見合わせ', '折返し運転', '運転再開']
     }
-    // 他のアドレスでフィルタが必要になったらここに追加するだけ
   },
   
   // --- 送信元アドレスと適応ルールの紐付け ---
   SENDERS: {
     'kamakura@sg-p.jp': ['KAMAKURA', 'BOUHAN'],
     'oshirase@kodomoanzen.police.pref.kanagawa.jp': ['POLICE', 'BOUHAN'],
-    'unkou@jorudan.co.jp': ['JORUDAN', 'TRAIN']
+    'alerts-transit@mail.yahoo.co.jp': ['YAHOO', 'TRAIN']
+  },
+
+// --- 追加：特定の住所が含まれる場合の転送先設定 ---
+  EXTRA_POST_CONFIG: {
+  // ※キーは上部の「EXTRA_BAND_KEY」を参照
+    WATCH_ADDRESSES: [
+      // 腰越地区
+      '鎌倉市西鎌倉', '鎌倉市腰越', '鎌倉市津', '鎌倉市津西', '鎌倉市七里ガ浜', '鎌倉市七里ガ浜東',
+      // 深沢地区
+      '鎌倉市鎌倉山', '鎌倉市手広', '鎌倉市梶原', '鎌倉市寺分', '鎌倉市笛田', '鎌倉市常盤', '鎌倉市上町屋', '鎌倉市山崎',
+      // 片瀬地区
+      '藤沢市片瀬山', '藤沢市片瀬目白山', '藤沢市片瀬', '藤沢市片瀬海岸', '藤沢市江の島'
+    ]
   },
 
   // --- エラー通知メール設定 ---
   ERROR_MAIL: {
-    TO: 'itpromotion@nishikamakura-jichikai.com',
+    TO: 'xxxxxx@xxxx.xxx',
     SUBJECT: '【GASエラー通知】Gmail to BAND連携',
     TEMPLATE: `
 ■発生したエラー:
@@ -78,13 +96,40 @@ const CONFIG = {
   WEATHER_CONFIG: {
     LATITUDE: "35.322356",
     LONGITUDE: "139.502873",
-    TITLE: "【西鎌倉 3時間おき天気予報 （自動投稿）】",
+    TITLE: "【西鎌倉 3時間おき詳細予報】",
     TAG: "#天気予報",
-    // 投稿に含める予報の件数（8件で24時間分）
-    FOOTER: "地点：西鎌倉交差点（北緯35.322356 東経139.502873）\n提供：Open-Meteo",
-    WEATHER_FORECAST_COUNT: 12, 
+    FOOTER: "凡例: 🌡️気温 / ☔降水確率 / 💧湿度 / 🚩風速(風向)\n地点: 西鎌倉交差点 / 提供: Open-Meteo",
+    WEATHER_FORECAST_COUNT: 12,
+    
+    // 実行制御（10分で見切り、1分弱でリトライ）
+    TIMEOUT_MS: 600000, 
+    MAX_RETRIES: 12,
+    WAIT_TIME_BASE: 50000,
+    
+    // APIパラメータ（一括管理）
+    API_PARAMS: [
+      "temperature_2m",
+      "weathercode",
+      "precipitation_probability",
+      "relative_humidity_2m",
+      "wind_speed_10m",
+      "wind_direction_10m"
+    ].join(","),
+
+    // 方位の定義
+    WIND_DIRECTIONS: [
+      { label: "北", arrow: "⬇️" },
+      { label: "北東", arrow: "↙️" },
+      { label: "東", arrow: "⬅️" },
+      { label: "南東", arrow: "↖️" },
+      { label: "南", arrow: "⬆️" },
+      { label: "南西", arrow: "↗️" },
+      { label: "西", arrow: "➡️" },
+      { label: "北西", arrow: "↘️" }
+    ],
+
     // Open-Meteo WMO天気コード変換表
-WEATHER_MAP: {
+    WEATHER_MAP: {
       0: "☀️ 快晴",
       1: "🌤️ 晴れ",
       2: "⛅ 晴れ時々曇り",
@@ -104,7 +149,8 @@ WEATHER_MAP: {
       81: "🌦️ にわか雨",
       82: "🌦️ 強いにわか雨",
       95: "⚡ 雷雨"
-    },
+    }
   }
 };
+
 
