@@ -1,28 +1,38 @@
 /**
- * 定期実行用
+ * 【本番用】タイマートリガーにはこの関数をセット
  */
-function triggerWeather() {
+function triggerWeather_Production() {
+  setBandDestination('PROD');
   postWeatherToBand();
 }
 
 /**
- * スマホのブラウザからアクセスされた時に実行される
+ * 【テスト用】エディタの「実行」ボタンで試す時用
  */
-function doGet() {
+function debug_WeatherTest() {
+  setBandDestination('TEST');
+  postWeatherToBand();
+}
+
+/**
+ * Webアプリの入り口
+ * URLの末尾に ?mode=test と付いていたらテストモード、なければ本番
+ */
+function doGet(e) {
+  // e.parameter がない場合（直接実行など）のガード
+  let mode = 'PROD';
+  if (e && e.parameter && e.parameter.mode === 'test') {
+    mode = 'TEST';
+  }
+  
   try {
-    // 天気予報の投稿処理を実行
+    setBandDestination(mode);
     postWeatherToBand();
     
-    // 成功時にスマホ画面に表示するメッセージ
-    return HtmlService.createHtmlOutput(
-      '<html><body style="text-align:center;padding-top:50px;font-family:sans-serif;">' +
-      '<h2>✅ 天気予報を投稿しました</h2>' +
-      '<p>BANDを確認してください。</p>' +
-      '<button onclick="window.close()" style="padding:10px 20px;font-size:16px;">閉じる</button>' +
-      '</body></html>'
-    );
-  } catch (e) {
-    return HtmlService.createHtmlOutput('<h2>❌ エラー発生</h2><p>' + e.toString() + '</p>');
+    const label = (mode === 'TEST') ? '🛠️ 【テスト】' : '✅ 【本番】';
+    return HtmlService.createHtmlOutput(`<h2>${label} 天気予報を投稿しました</h2>`);
+  } catch (err) {
+    return HtmlService.createHtmlOutput(`<h2>❌ エラー</h2><p>${err.toString()}</p>`);
   }
 }
 
@@ -152,8 +162,4 @@ ${errorMessage}
   } catch (e) {
     console.error("エラーメールの送信自体に失敗しました: " + e.message);
   }
-}
-
-function triggerWeather() {
-  postWeatherToBand();
 }
