@@ -1,6 +1,5 @@
 /**
  * 定期実行用（トリガー設定用）
- * トリガー画面で「何が動いているか」を分かりやすくするために用意しています
  */
 function triggerGmailToBand() {
   checkGmailAndPostToBand();
@@ -8,12 +7,10 @@ function triggerGmailToBand() {
 
 /**
  * 未読メールをスキャンし、添付ファイルの保存とBANDへの投稿を行います。
- * 特定の住所が含まれる場合は別BANDへも転送します。
  */
 function checkGmailAndPostToBand() {
   const lock = LockService.getScriptLock();
   try {
-    // 1秒待機してロックが取得できなければ実行をスキップ
     if (!lock.tryLock(1000)) {
       console.log("前の処理が実行中のため、今回の実行をスキップします。");
       return;
@@ -22,7 +19,6 @@ function checkGmailAndPostToBand() {
     const senderEmails = Object.keys(CONFIG.SENDERS);
     if (senderEmails.length === 0) return;
 
-    // 未読メールを検索
     const query = `(${senderEmails.map(email => `from:${email}`).join(' OR ')}) is:unread`;
     const threads = GmailApp.search(query, 0, 100);
     
@@ -51,7 +47,6 @@ function checkGmailAndPostToBand() {
 
     if (allMessages.length === 0) return;
 
-    // 古い順にソート
     allMessages.sort((a, b) => a.date - b.date);
 
     const targetData = allMessages.slice(0, CONFIG.MAX_THREADS_PER_RUN);
@@ -63,21 +58,42 @@ function checkGmailAndPostToBand() {
     for (const data of targetData) {
       const message = data.message;
       const senderEmail = data.senderKey;
-      const subject = message.getSubject();
+      const subject = message.getSubject() || "";
 
       try {
         // --- 汎用フィルタ処理 ---
         const filterConfig = CONFIG.MAIL_FILTERS[senderEmail];
         if (filterConfig) {
-          const body = message.getPlainBody();
-          const contentForCheck = body + subject;
+          const body = message.getPlainBody() || "";
+          let bodyForCheck = body;
 
-          const routeReg = new RegExp(filterConfig.priorityRoutes.join('|'));
-          const keywordReg = new RegExp(filterConfig.criticalKeywords.join('|'));
+          // 1. Yahooメール（転送含む）の場合、判定範囲を限定してフッター・広告を無視する
+          if (senderEmail === 'kaztsh@gmail.com' || senderEmail === 'alerts-transit@mail.yahoo.co.jp') {
+            const startMark = "さん";
+            const endMark = "このメールに返信されても";
+            const startIndex = body.indexOf(startMark);
+            const endIndex = body.indexOf(endMark);
+            
+            if (startIndex !== -1 && endIndex !== -1) {
+              // 「さん」から「このメールに返信〜」の間だけを抽出
+              bodyForCheck = body.substring(startIndex + startMark.length, endIndex);
+              // その中から広告ブロック（▼遅延・運休〜URL）も削除
+              bodyForCheck = bodyForCheck.replace(/▼遅延・運休の情報がすぐ届く[\s\S]*?https:\/\/yahoo\.jp\/[a-zA-Z0-9_-]+/g, "");
+            }
+          }
 
-          const isPriorityRoute = routeReg.test(contentForCheck);
-          const isCriticalIssue = keywordReg.test(body);
+          // 2. ルート判定（部分一致を防ぐため includes で厳格に判定）
+          // 件名または判定用本文に「湘南モノレール」等の名前が丸ごと入っているか
+          const isPriorityRoute = filterConfig.priorityRoutes.some(route => 
+            subject.includes(route) || bodyForCheck.includes(route)
+          );
 
+          // 3. キーワード判定
+          const isCriticalIssue = filterConfig.criticalKeywords.some(kw => 
+            bodyForCheck.includes(kw)
+          );
+
+          // 全量投稿対象（優先路線）でもなく、かつ重要キーワードも含まれていない場合はスキップ
           if (!isPriorityRoute && !isCriticalIssue) {
             console.log(`フィルタによりスキップ: ${subject}`);
             message.markRead();
@@ -88,7 +104,6 @@ function checkGmailAndPostToBand() {
         const postBody = createPostBody(message, senderEmail);
         if (!postBody) throw new Error("本文の生成に失敗しました。");
 
-        // 添付ファイルの処理
         const attachments = message.getAttachments();
         const fileUrls = attachments
           .filter(file => file && typeof file.getName === 'function')
@@ -105,13 +120,10 @@ function checkGmailAndPostToBand() {
           processedCount++;
           console.log(`完了(${processedCount}/${totalToProcess}): [${data.date}] ${message.getSubject()}`);
           
-          // --- 2. 追加：ピーガルくんかつ特定住所が含まれる場合の別BAND投稿 ---
-          // ピーガルくんのアドレス判定（Configのキーを使用）
+          // --- 2. 特定住所が含まれる場合の別BAND投稿（ピーガルくん用） ---
           if (senderEmail === 'oshirase@kodomoanzen.police.pref.kanagawa.jp') {
             const watchAddresses = CONFIG.EXTRA_POST_CONFIG.WATCH_ADDRESSES;
-            const plainBody = message.getPlainBody(); // 判定用に加工前の本文を取得
-            
-            // 本文中に住所リストのいずれかが含まれているか判定
+            const plainBody = message.getPlainBody();
             const hasTargetAddress = watchAddresses.some(address => plainBody.includes(address));
             
             if (hasTargetAddress) {
@@ -124,7 +136,6 @@ function checkGmailAndPostToBand() {
           throw new Error("BAND APIへの投稿に失敗しました。");
         }
 
-        // 連続投稿制限回避のための待機
         Utilities.sleep(10000);
 
       } catch (e) {
@@ -150,7 +161,6 @@ function checkGmailAndPostToBand() {
   } catch (e) {
     console.error(`システムエラー: ${e.message}`);
   } finally {
-    // 最後に必ずロックを解除
     if (lock.hasLock()) {
       lock.releaseLock();
     }
@@ -164,17 +174,34 @@ function createPostBody(message, senderEmail) {
   const configEntry = CONFIG.SENDERS[senderEmail];
   if (!configEntry) return null;
   
-  // CONFIGのRULESとTAGSから値を取得
   const rule = CONFIG.RULES[configEntry[0]];
   const tag = CONFIG.TAGS[configEntry[1]];
 
   const subject = message.getSubject() || "無題";
-  let body = message.getPlainBody() || "";
+  const fullBody = message.getPlainBody() || "";
+  let body = fullBody;
   
-  // カットオフ処理
+  // 1. 指定位置より上をカット
+  if (rule.startAfter) {
+    const startIndex = body.indexOf(rule.startAfter);
+    if (startIndex !== -1) {
+      body = body.substring(startIndex + rule.startAfter.length).trim();
+    }
+  }
+
+  // 2. 「救出」するフッター行の特定（Copyrightなど）
+  let savedFooter = "";
+  if (rule.keepFrom) {
+    const keepIndex = fullBody.indexOf(rule.keepFrom);
+    if (keepIndex !== -1) {
+      savedFooter = "\n-------------------------\n" + fullBody.substring(keepIndex).trim();
+    }
+  }
+
+  // 3. 指定位置より下をカット（案内文など）
   if (rule.cutOffString) {
     const cutIndex = body.indexOf(rule.cutOffString);
-    if (cutIndex !== -1) body = body.substring(0, cutIndex);
+    if (cutIndex !== -1) body = body.substring(0, cutIndex).trim();
   }
 
   // 制御文字の除去
@@ -184,7 +211,13 @@ function createPostBody(message, senderEmail) {
   if (tag) content += `${tag}\n`;
   content += `件名：${subject}\n`;
   if (rule.customHeader) content += `${rule.customHeader}\n`;
-  content += `\n${cleanBody}`;
   
+  content += `\n${cleanBody}`;
+
+  // 4. 救出したフッターがあれば末尾に結合
+  if (savedFooter) {
+    content += savedFooter;
+  }
+ 
   return content;
 }
