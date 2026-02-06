@@ -73,6 +73,8 @@ function checkJmaAndPostToBand() {
 
       postToBand(body);
       console.log("投稿処理が完了しました。");
+      // 連続投稿によるAPI制限を回避するため20秒待機
+      Utilities.sleep(20000);
     }
 
     // 地震・津波・火山フィードの監視
@@ -104,6 +106,8 @@ function checkJmaAndPostToBand() {
           const headline = contentMatch ? contentMatch[1] : title;
           postToBand(`#防災情報\n【地震情報】\n${headline}`);
           if (updated > latestDateTime) latestDateTime = updated;
+          // 連続投稿制限回避
+          Utilities.sleep(20000);
         }
       }
 
@@ -116,6 +120,8 @@ function checkJmaAndPostToBand() {
           const headline = contentMatch ? contentMatch[1] : title;
           postToBand(`#防災情報\n【津波情報】\n${headline}`);
           if (updated > latestDateTime) latestDateTime = updated;
+          // 連続投稿制限回避
+          Utilities.sleep(20000);
         }
       }
 
@@ -130,6 +136,8 @@ function checkJmaAndPostToBand() {
           const headline = contentMatch ? contentMatch[1] : title;
           postToBand(`#防災情報\n【火山・降灰情報】\n${headline}`);
           if (updated > latestDateTime) latestDateTime = updated;
+          // 連続投稿制限回避
+          Utilities.sleep(20000);
         }
       }
     }
