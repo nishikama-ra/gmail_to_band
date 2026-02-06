@@ -29,7 +29,10 @@ function doGet(e) {
     } else if (type === 'traffic') {
       checkGmailAndPostToBand();
       return HtmlService.createHtmlOutput(`<h2>${label} 鉄道運行情報を確認・投稿しました</h2>`);
-    }
+    } else if (type === 'bousai') {
+      checkJmaAndPostToBand();
+      return HtmlService.createHtmlOutput(`<h2>${label} 防災情報を確認・投稿しました</h2>`);
+    } 
   } catch (err) {
     return HtmlService.createHtmlOutput(`<h2>❌ エラー</h2><p>${err.toString()}</p>`);
   }
@@ -69,4 +72,21 @@ function triggerWeather_Production() {
 function debug_WeatherTest() {
   setBandDestination('TEST');
   postWeatherToBand();
+}
+
+
+/**
+ * 【本番用】防災情報（気象庁API）監視トリガー
+ */
+function bousai_ProductionRun() {
+  setBandDestination('PROD');
+  checkJmaAndPostToBand();
+}
+
+/**
+ * 【テスト用】防災情報（気象庁API）動作確認
+ */
+function bousai_TestRun() {
+  setBandDestination('TEST');
+  checkJmaAndPostToBand();
 }
