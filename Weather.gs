@@ -15,28 +15,6 @@ function debug_WeatherTest() {
 }
 
 /**
- * Webアプリの入り口
- * URLの末尾に ?mode=test と付いていたらテストモード、なければ本番
- */
-function doGet(e) {
-  // e.parameter がない場合（直接実行など）のガード
-  let mode = 'PROD';
-  if (e && e.parameter && e.parameter.mode === 'test') {
-    mode = 'TEST';
-  }
-  
-  try {
-    setBandDestination(mode);
-    postWeatherToBand();
-    
-    const label = (mode === 'TEST') ? '🛠️ 【テスト】' : '✅ 【本番】';
-    return HtmlService.createHtmlOutput(`<h2>${label} 天気予報を投稿しました</h2>`);
-  } catch (err) {
-    return HtmlService.createHtmlOutput(`<h2>❌ エラー</h2><p>${err.toString()}</p>`);
-  }
-}
-
-/**
  * 指定座標の3時間おき予報をBANDに投稿する（リトライ＋エラーメール通知版）
  */
 function postWeatherToBand() {
