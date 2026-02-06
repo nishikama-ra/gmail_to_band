@@ -15,28 +15,6 @@ function debug_PollenTest() {
 }
 
 /**
- * 花粉情報用のWebアプリ入り口
- * 注意: Weather.gsに既にdoGetがある場合は、
- * パラメータで呼び出す関数を振り分ける等の統合が必要です。
- */
-function doGet(e) {
-  let mode = 'PROD';
-  if (e && e.parameter && e.parameter.mode === 'test') {
-    mode = 'TEST';
-  }
-  
-  try {
-    setBandDestination(mode);
-    postPollenToBand();
-    
-    const label = (mode === 'TEST') ? '🛠️ 【テスト】' : '✅ 【本番】';
-    return HtmlService.createHtmlOutput(`<h2>${label} 花粉情報を投稿しました</h2>`);
-  } catch (err) {
-    return HtmlService.createHtmlOutput(`<h2>❌ エラー</h2><p>${err.toString()}</p>`);
-  }
-}
-
-/**
  * 指定座標の5日分花粉情報をBANDに投稿する
  */
 function postPollenToBand() {
