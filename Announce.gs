@@ -1,6 +1,10 @@
-function doGet(e) {
+/**
+ * ポータル画面のレンダリング処理
+ * Alloc.gsから呼び出される
+ */
+function renderAnnouncePortal(e) {
   // 1. Case: Response from BAND with Authorization Code
-  if (e.parameter.code) {
+  if (e && e.parameter && e.parameter.code) {
     var successHtml = 
       "<meta charset='UTF-8'>" +
       "<div style='font-family: sans-serif; text-align: center; padding-top: 50px;'>" +
@@ -28,9 +32,8 @@ function doGet(e) {
     "</div>" +
     
     "<p style='font-size: 0.9em; color: #7f8c8d;'>System Status: <span style='color: green; font-weight: bold;'>Operational / Verified</span></p>" +
-    "<p style='font-size: 0.8em; color: #95a5a6; border-top: 1px solid #eee; padding-top: 10px;'>&copy; Nishi-kamakura Residents' Association All Rights Reserved.</p>" +
+    "<p style='font-size: 0.8em; color: #95a5a6; border-top: 1px solid #eee; padding-top: 10px;'>© 2024 Nishikamakura Jichikai. All rights reserved.</p>" +
     "</div>";
 
-  // Fixed English title to avoid any encoding issues in the browser tab
   return HtmlService.createHtmlOutput(portalHtml).setTitle("Nishikamakura Jichikai API Portal");
 }
