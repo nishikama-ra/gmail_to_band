@@ -1,20 +1,4 @@
 /**
- * 【本番用】タイマートリガーにはこの関数をセット
- */
-function triggerWeather_Production() {
-  setBandDestination('PROD');
-  postWeatherToBand();
-}
-
-/**
- * 【テスト用】エディタの「実行」ボタンで試す時用
- */
-function debug_WeatherTest() {
-  setBandDestination('TEST');
-  postWeatherToBand();
-}
-
-/**
  * 指定座標の3時間おき予報をBANDに投稿する（リトライ＋エラーメール通知版）
  */
 function postWeatherToBand() {
