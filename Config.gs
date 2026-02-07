@@ -136,13 +136,24 @@ const CONFIG = {
       { label: "北西", arrow: "↘️" }
     ]
   },
-  // --- 防災情報（気象庁API）設定 ---
+  
   // --- 防災情報（気象庁API）設定 ---
   BOUSAI_CONFIG: {
     URL_WARNING: "https://www.jma.go.jp/bosai/warning/data/warning/140000.json",
+  // XMLフィードURLをこちらに集約
+    URL_FEED_EQVOL: "https://www.data.jma.go.jp/developer/xml/feed/eqvol.xml", 
+  
     CITY_CODE: "1420400", // 鎌倉市
+    CITY_NAME: "鎌倉市",
+    MIN_INTENSITY: "3",    // 投稿する最小震度
+  
+    PREF_NAME: "神奈川県",
+    WATCH_VOLCANOES: ["富士山", "箱根山", "伊豆東部火山群", "伊豆大島"],
+    WATCH_TSUNAMI_REGION: "相模湾・三浦半島",
+  
     TITLE_PREFIX: "【鎌倉市：",
     TITLE_SUFFIX: "】",
+  
     MASTER: {
       "special_warnings": {
         "31": "暴風雪特別警報：命を守るための最善の行動をとってください。",
