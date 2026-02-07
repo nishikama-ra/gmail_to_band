@@ -9,6 +9,7 @@ function checkJmaAndPostToBand() {
   const lastCheck = scriptProps.getProperty('LAST_JMA_DATETIME') || "";
   const lastPostedContent = scriptProps.getProperty('LAST_JMA_POST_CONTENT') || "";
   let latestDateTime = lastCheck;
+  let totalMessage = "";
 
   try {
     // --- 1. 気象警報・注意報セクション ---
@@ -47,18 +48,13 @@ function checkJmaAndPostToBand() {
         }
       });
 
-      if (activeMessages.length > 0 && hasUpdate) {
+      if (activeMessages.length > 0 && hasUpdate)
+      {
         const sortedContent = activeMessages.sort().join('\n');
         let levelLabel = (maxLevel === 1) ? "特別警報" : (maxLevel === 2) ? "警報・注意報" : "注意報";
         const header = conf.TITLE_PREFIX + "気象情報" + conf.TITLE_SUFFIX;
-        const body = header + "\n" + levelLabel + "が発表されています。\n\n" + sortedContent;
-
-        if (body !== lastPostedContent) {
-          postToBand(body);
-          scriptProps.setProperty('LAST_JMA_POST_CONTENT', body);
-          console.log("気象警報・注意報の投稿が完了しました。");
-          Utilities.sleep(20000);
-        }
+        totalMessage += header + "\n" + levelLabel + "が発表されています。\n\n" + sortedContent + "\n\n";
+        console.log("気象情報を集約に追加しました。");
       }
     }
 
@@ -80,7 +76,6 @@ function checkJmaAndPostToBand() {
 
       const title = titleMatch[1];
       const detailUrl = linkMatch[1];
-      let currentPostBody = ""; // ループごとに個別の変数を使用
 
       // A. 地震情報の判定（鎌倉市：震度3以上に限定）
       if (title.includes("震源") || title.includes("震度")) {
@@ -96,13 +91,14 @@ function checkJmaAndPostToBand() {
             const magnitudeMatch = xmlDetail.match(/<jmx_eb:Magnitude.*?>(.*?)<\/jmx_eb:Magnitude>/);
             const maxIntMatch = xmlDetail.match(/<MaxInt>(.*?)<\/MaxInt>/);
             
-            let detailMsg = title + "\n";
+            let detailMsg = "【地震情報】\n" + title + "\n";
             if (epicenterMatch) detailMsg += "震源地：" + epicenterMatch[1] + "\n";
             if (magnitudeMatch) detailMsg += "規模：M" + magnitudeMatch[1] + "\n";
             if (maxIntMatch) detailMsg += "最大震度：" + maxIntMatch[1].replace(/(\d)[\+\-]/, (m, p1) => p1 + (m.includes('+') ? '強' : '弱')) + "\n";
             const kamakuraIntJP = kamakuraInt.replace("5-", "5弱").replace("5+", "5強").replace("6-", "6弱").replace("6+", "6強");
-            detailMsg += "【鎌倉市の震度：" + kamakuraIntJP + "】";
-            currentPostBody = `#防災情報\n【地震情報】\n${detailMsg}`;
+            detailMsg += conf.CITY_NAME + "の震度：" + kamakuraIntJP + "\n\n";
+            totalMessage += detailMsg;
+            console.log(`地震情報を集約に追加: ${title}`);
           }
         }
       }
@@ -114,7 +110,8 @@ function checkJmaAndPostToBand() {
         if (xmlDetail.includes(conf.WATCH_TSUNAMI_REGION)) {
           const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
           const headline = contentMatch ? contentMatch[1] : title;
-          currentPostBody = `#防災情報\n【津波情報】\n${headline}`;
+          totalMessage += headline + "\n\n";
+          console.log(`津波情報を集約に追加: ${title}`);
         }
       }
 
@@ -125,25 +122,28 @@ function checkJmaAndPostToBand() {
         if (conf.WATCH_VOLCANOES.some(v => xmlDetail.includes(v)) || xmlDetail.includes(conf.PREF_NAME)) {
           const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
           const headline = contentMatch ? contentMatch[1] : title;
-          currentPostBody = `#防災情報\n【火山・降灰情報】\n${headline}`;
+          totalMessage += headline + "\n\n";
+          console.log(`火山情報を集約に追加: ${title}`);
         }
       }
-
-      // 共通の投稿処理
-      if (currentPostBody !== "" && currentPostBody !== lastPostedContent) {
-        postToBand(currentPostBody);
-        scriptProps.setProperty('LAST_JMA_POST_CONTENT', currentPostBody);
-        console.log(`投稿完了: ${title}`);
-        Utilities.sleep(20000);
-      }
       
-      // 更新日時の記録
       if (updated > latestDateTime) {
         latestDateTime = updated;
       }
     }
 
-    // 最後に一括して最新チェック時刻を更新
+    // --- 3. 統合投稿判定 ---
+    if (totalMessage !== "") {
+      const finalBody = "#防災\n\n" + totalMessage.trim();
+      if (finalBody !== lastPostedContent) {
+        postToBand(finalBody);
+        scriptProps.setProperty('LAST_JMA_POST_CONTENT', finalBody);
+        console.log("防災情報の統合投稿が完了しました。");
+      } else {
+        console.log("前回投稿内容と同一のため、投稿をスキップしました。");
+      }
+    }
+
     if (latestDateTime !== lastCheck) {
       scriptProps.setProperty('LAST_JMA_DATETIME', latestDateTime);
     }
