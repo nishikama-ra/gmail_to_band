@@ -1,144 +1,138 @@
 /**
  * Webアプリの入り口（共通ルーター）
  * typeパラメータにより機能を振り分け、modeにより本番/テストを切り替える
- * 不明なパラメータ時は安全のため実処理を介さずポータル画面を表示する
  */
 function doGet(e) {
-  const params = e && e.parameter ?
-  e.parameter : {};
+  const params = e && e.parameter ? e.parameter : {};
   const type = params.type || '';
   const modeParam = params.mode || '';
-  // 1. typeが正しく指定されていない場合は、認可コードの有無を含めAnnounce.gsに判定を委ねる
-  if (type !== 'weather' && type !== 'pollen' && type !== 'traffic' && type !== 'announce') {
+
+  // 1. 有効なタイプ一覧
+  if (!['weather', 'email', 'bousai', 'announce'].includes(type)) {
     return renderAnnouncePortal(e);
   }
 
-  // 2. typeが正当な場合のみ、modeを判定して宛先を切り替える
-  let mode = 'PROD';
-  if (modeParam === 'test') {
-    mode = 'TEST';
-  }
+  // 2. modeを判定して宛先を切り替える
+  let mode = (modeParam === 'test') ? 'TEST' : 'PROD';
   
   try {
     setBandDestination(mode);
-    const label = (mode === 'TEST') ?
-    '🛠️ 【テスト】' : '✅ 【本番】';
+    const label = (mode === 'TEST') ? '🛠️ 【テスト】' : '✅ 【本番】';
 
     if (type === 'weather') {
       postWeatherToBand();
       return HtmlService.createHtmlOutput(`<h2>${label} 天気予報を投稿しました</h2>`);
-    } else if (type === 'traffic') {
+    } else if (type === 'email') {
       checkGmailAndPostToBand();
-      return HtmlService.createHtmlOutput(`<h2>${label} 鉄道運行情報を確認・投稿しました</h2>`);
+      return HtmlService.createHtmlOutput(`<h2>${label} 受信メールを確認・投稿しました</h2>`);
     } else if (type === 'bousai') {
       checkJmaAndPostToBand();
       return HtmlService.createHtmlOutput(`<h2>${label} 防災情報を確認・投稿しました</h2>`);
     } else if (type === 'announce') {
       MonthlySecPostToBand();
       return HtmlService.createHtmlOutput(`<h2>${label} お知らせを投稿しました</h2>`);
-    } 
+    }
   } catch (err) {
-    return HtmlService.createHtmlOutput(`<h2>❌ エラー</h2><p>${err.toString()}</p>`);
+    console.error(err.toString());
+    return HtmlService.createHtmlOutput(`<h2>❌ エラーが発生しました</h2><p>${err.toString()}</p>`);
   }
 }
 
-// --- 以下、各ファイルから集約したトリガー・デバッグ用関数 ---
-
-/**
- * 【本番用】メール投稿トリガー
- */
-function main_ProductionRun() {
+// ============================================================
+// 1. 受信メール監視 (EmailToBand.gs)
+// ============================================================
+function run_Email() {
   setBandDestination('PROD');
-  console.log("ℹ️ 本番モードでメール処理を開始します");
+  console.log("✅ 本番モード：受信メール（運行・防犯等）のチェックを開始します");
   checkGmailAndPostToBand();
 }
 
-/**
- * 【テスト用】メール投稿デバッグ
- */
-function debug_TestRun() {
+function test_Email() {
   setBandDestination('TEST');
-  console.log("🛠️ テストモードでメール処理を開始します");
+  console.log("🛠️ テストモード：受信メール（運行・防犯等）のチェックを開始します");
   checkGmailAndPostToBand();
 }
 
-/**
- * 【本番用】天気予報トリガー
- */
-function triggerWeather_Production() {
+// ============================================================
+// 2. 天気予報 (Weather.gs)
+// ============================================================
+function run_Weather() {
   setBandDestination('PROD');
-  console.log("ℹ️ 本番モードで天気予報処理を開始します");
+  console.log("✅ 本番モード：天気予報の投稿を開始します");
   postWeatherToBand();
 }
 
-/**
- * 【テスト用】天気予報デバッグ
- */
-function debug_WeatherTest() {
+function test_Weather() {
   setBandDestination('TEST');
-  console.log("🛠️ テストモードで天気予報処理を開始します");
+  console.log("🛠️ テストモード：天気予報の投稿を開始します");
   postWeatherToBand();
 }
 
-
-/**
- * 【本番用】防災情報（気象庁API）監視トリガー
- */
-function bousai_ProductionRun() {
+// ============================================================
+// 3. 防災情報 (Bousai.gs)
+// ============================================================
+function run_Bousai() {
   setBandDestination('PROD');
-  console.log("ℹ️ 本番モードで防災情報収集処理を開始します");
+  console.log("✅ 本番モード：防災情報の監視を開始します");
   checkJmaAndPostToBand();
 }
 
-/**
- * 【テスト用】防災情報（気象庁API）動作確認
- */
-function bousai_TestRun() {
+function test_Bousai() {
   setBandDestination('TEST');
-  console.log("🛠️ テストモードで防災情報収集処理を開始します");
+  console.log("🛠️ テストモード：防災情報の監視を開始します");
   checkJmaAndPostToBand();
 }
 
-/**
- * 【本番用】定期お知らせ投稿トリガー
- */
-function triggerAnnounce_Production() {
+// ============================================================
+// 4. 定期広報 (Announce.gs / Monthlyinfo.gs)
+// ============================================================
+function run_Announce() {
   setBandDestination('PROD');
-  console.log("ℹ️ 本番モードでお知らせ投稿処理を開始します");
+  console.log("✅ 本番モード：定期お知らせ投稿を開始します");
   MonthlySecPostToBand();
 }
 
-/**
- * 【テスト用】定期お知らせ投稿デバッグ
- */
-function debug_AnnounceTest() {
+function test_Announce() {
   setBandDestination('TEST');
-  console.log("🛠️ テストモードでお知らせ投稿処理を開始します");
+  console.log("🛠️ テストモード：定期お知らせ投稿を開始します");
   MonthlySecPostToBand();
 }
 
 /**
- * 【月次トリガー用】「周辺情報」と「住宅地」の両方のBANDにお知らせを投稿
+ * [MAIN] と [EXTRA(本体)] の両方のBANDにお知らせを投稿
  */
-function triggerAnnounce_MonthlyProduction() {
-  // 1. 「周辺情報」BAND（KEY_PROD_MAIN）への投稿
+function run_Announce_MonthlyAll() {
+  // 1. MAINのBAND（KEY_PROD_MAIN）への投稿
   setBandDestination('PROD');
-  console.log("ℹ️ 「周辺情報」BANDへのお知らせ投稿を開始します");
+  console.log("✅ 本番モード：[MAIN] へのお知らせ投稿を開始します");
   MonthlySecPostToBand();
   
-  // 連続投稿による制限を避けるため20秒待機
-  console.log("20秒待機中...");
-  Utilities.sleep(20000);
-  
-  // 2. 「住宅地」BAND（KEY_PROD_EXTRA）への投稿
-  // setBandDestination('PROD')を実行すると CONFIG.TARGET_BAND_KEY に MAIN が入るため
-  // ここでは明示的に EXTRA のキーをセットして呼び出します
-  const subBandKey = PropertiesService.getScriptProperties().getProperty('KEY_PROD_EXTRA');
-  if (subBandKey) {
-    CONFIG.TARGET_BAND_KEY = subBandKey;
-    console.log("ℹ️ 「住宅地」BANDへのお知らせ投稿を開始します");
+  // 2. EXTRAのBAND（KEY_PROD_EXTRA）への投稿
+  const extraBandKey = PropertiesService.getScriptProperties().getProperty('KEY_PROD_EXTRA');
+  if (extraBandKey) {
+    console.log("ℹ️ 20秒待機後、EXTRA(本体)への連続投稿を行います...");
+    Utilities.sleep(20000); 
+    CONFIG.TARGET_BAND_KEY = extraBandKey; // EXTRAのキーに切り替え
+    console.log("✅ 本番モード：[EXTRA(本体)] へのお知らせ投稿を開始します");
     MonthlySecPostToBand();
   } else {
-    console.warn("⚠️ 「住宅地」BANDのキー（KEY_PROD_EXTRA）が見つからないため、投稿をスキップしました");
+    console.warn("⚠️ EXTRA(本体)のキーが見つからないためスキップしました");
+  }
+}
+
+function test_Announce_MonthlyAll() {
+  // 1. テスト用MAIN（KEY_TEST_MAIN）への投稿
+  setBandDestination('TEST');
+  console.log("🛠️ テストモード：[テスト用MAIN] へのお知らせ投稿を開始します");
+  MonthlySecPostToBand();
+  
+  // 2. テスト用EXTRA（KEY_TEST_EXTRA）への投稿
+  const extraBandKey = PropertiesService.getScriptProperties().getProperty('KEY_TEST_EXTRA');
+  if (extraBandKey) {
+    console.log("ℹ️ 10秒待機後、テスト用EXTRAへの連続投稿を行います...");
+    Utilities.sleep(10000); 
+    CONFIG.TARGET_BAND_KEY = extraBandKey;
+    console.log("🛠️ テストモード：[テスト用EXTRA] へのお知らせ投稿を開始します");
+    MonthlySecPostToBand();
   }
 }
