@@ -9,6 +9,7 @@ function doGet(e) {
 
   // 1. 有効なタイプ一覧
   if (!['weather', 'email', 'bousai', 'announce'].includes(type)) {
+    // Portal.gs 内の関数を呼び出し（認証画面またはシステム説明を表示）
     return renderAnnouncePortal(e);
   }
 
@@ -29,6 +30,7 @@ function doGet(e) {
       checkJmaAndPostToBand();
       return HtmlService.createHtmlOutput(`<h2>${label} 防災情報を確認・投稿しました</h2>`);
     } else if (type === 'announce') {
+      // MonthlyAnnounce.gs 内の関数を呼び出し
       MonthlySecPostToBand();
       return HtmlService.createHtmlOutput(`<h2>${label} お知らせを投稿しました</h2>`);
     }
@@ -84,7 +86,7 @@ function test_Bousai() {
 }
 
 // ============================================================
-// 4. 定期広報 (Announce.gs / Monthlyinfo.gs)
+// 4. 定期広報 (MonthlyAnnounce.gs)
 // ============================================================
 function run_Announce() {
   setBandDestination('PROD');
@@ -112,7 +114,7 @@ function run_Announce_MonthlyAll() {
   if (extraBandKey) {
     console.log("ℹ️ 20秒待機後、EXTRA(本体)への連続投稿を行います...");
     Utilities.sleep(20000); 
-    CONFIG.TARGET_BAND_KEY = extraBandKey; // EXTRAのキーに切り替え
+    CONFIG.TARGET_BAND_KEY = extraBandKey; 
     console.log("✅ 本番モード：[EXTRA(本体)] へのお知らせ投稿を開始します");
     MonthlySecPostToBand();
   } else {
