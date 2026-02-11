@@ -61,8 +61,8 @@ function postWeatherToBand() {
     const list = data.list;
     const now = new Date();
     
-    let section1 = "【天気・気温・風】\n";
-    let section2 = "【天気・降水確率・湿度】\n";
+    let section1 = "【天気・気温・降水確率】\n";
+    let section2 = "【天気・湿度・風】\n";
     let count = 0;
 
     for (let i = 0; i < list.length && count < conf.WEATHER_FORECAST_COUNT; i++) {
@@ -89,10 +89,10 @@ function postWeatherToBand() {
         let labelStr = weatherDisp.label;
         if (labelStr.length === 1) labelStr += "　";
 
-        // ブロック1: 天気・気温・風
-        section1 += `${timeStr}   ${weatherDisp.emoji}${labelStr}   🌡️ ${temp}℃ / 🚩 ${wind}m/s (${dirInfo.arrow}${dirInfo.label})\n`;
-        // ブロック2: 天気・降水確率・湿度
-        section2 += `${timeStr}   ${weatherDisp.emoji}${labelStr}   ☔ ${pop}% / 💧 ${hum}%\n`;
+        // ブロック1: 天気・気温・降水確率
+        section1 += `${timeStr}   ${weatherDisp.emoji}${labelStr}   🌡️ ${temp}℃ / ☔ ${pop}% \n`;
+        // ブロック2: 天気・湿度・風
+        section2 += `${timeStr}   ${weatherDisp.emoji}${labelStr}   💧 ${hum}% / 🚩 ${wind}m/s (${dirInfo.arrow}${dirInfo.label}) \n`;
         
         count++;
       }
