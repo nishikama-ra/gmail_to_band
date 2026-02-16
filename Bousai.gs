@@ -72,8 +72,7 @@ function checkJmaAndPostToBand() {
 
       // 投稿用の気象メッセージ構築（警報・特別警報に変化があった場合のみ）
       if (changeMessages.length > 0) {
-        // ★タイトルを変更
-        let weatherBody = "【自動投稿：西鎌倉 気象情報】\n";
+        let weatherBody = "西鎌倉の気象情報\n";
         weatherBody += changeMessages.join('\n') + "\n\n";
 
         if (activeList.length > 0) {
@@ -81,7 +80,7 @@ function checkJmaAndPostToBand() {
           weatherBody += activeList.join('\n');
         } else if (currentWarningCodes.length === 0) {
           // ★こちら側のタイトルも変更
-          weatherBody = "【自動投稿：西鎌倉 気象情報】\n警報・特別警報はすべて解除されました。";
+          weatherBody = "西鎌倉の気象情報\n警報・特別警報はすべて解除されました。";
         }
 
         totalMessage += weatherBody + "\n\n";
@@ -144,7 +143,7 @@ function checkJmaAndPostToBand() {
         if (xmlDetail.includes(conf.WATCH_TSUNAMI_REGION)) {
           const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
           const headline = contentMatch ? contentMatch[1] : title;
-          totalMessage += "【津波情報】\n" + headline + "\n\n";
+          totalMessage += "津波の情報\n" + headline + "\n\n";
           console.log(`津波情報を集約に追加: ${title}`);
         }
       }
@@ -162,7 +161,7 @@ function checkJmaAndPostToBand() {
         if (isWatchVolcano || isUrgentKanto) {
           const contentMatch = entry.match(/<content.*?>(.*?)<\/content>/);
           const headline = contentMatch ? contentMatch[1] : title;
-          totalMessage += "【火山情報】\n" + headline + "\n\n";
+          totalMessage += "火山の情報\n" + headline + "\n\n";
           console.log(`火山情報を集約に追加: ${title}`);
         }
       }
@@ -174,7 +173,9 @@ function checkJmaAndPostToBand() {
 
     // --- 3. 統合投稿判定 ---
     if (totalMessage.trim() !== "") {
-      const finalBody = "#防災\n\n" + totalMessage.trim();
+      const header = " 防災情報の自動通知\n──────────────\n\n";
+      const finalBody = "#防災\n" + header + totalMessage.trim();
+    
       if (finalBody !== lastPostedContent) {
         postToBand(finalBody);
         scriptProps.setProperty('LAST_JMA_POST_CONTENT', finalBody);
@@ -182,12 +183,12 @@ function checkJmaAndPostToBand() {
       } else {
         console.log("前回投稿内容と同一のため、投稿をスキップしました。");
       }
-    }
+    } 
 
+    // 最新の更新日時を保存（これはメッセージの有無に関わらず実行すべき処理）
     if (latestDateTime !== lastCheck) {
       scriptProps.setProperty('LAST_JMA_DATETIME', latestDateTime);
     }
-
   } catch (e) {
     console.error("処理失敗: " + e.toString());
   }
