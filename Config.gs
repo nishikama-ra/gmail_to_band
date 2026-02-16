@@ -59,7 +59,7 @@ const CONFIG = {
      'alerts-transit@mail.yahoo.co.jp': {
       isYahooTransit: true, // Yahoo特有の広告除去ロジックを有効化
       priorityRoutes: ['湘南モノレール', '江ノ島電鉄'], // 監視したい路線を追加
-      criticalKeywords: ['運休', '見合わせ', '折返し運転', '運転再開']
+      criticalKeywords: ['運休', '見合わせ', '折返し運転', '運転再開', '直通運転を中止']
     }
   },
   
